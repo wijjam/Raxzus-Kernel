@@ -2,11 +2,16 @@
 
 A monolithic x86 kernel built from scratch in C and Assembly. This is a personal learning project aimed at understanding how operating systems work at the lowest level — from bootloading to virtual memory.
 
+## Boot Screen
+
+![RaxzusOS Boot Sequence](docs/boot.png)
+
 ## Features
 
 - **Bootloader** — GRUB multiboot, boots via ISO in QEMU
 - **VGA Text Mode** — Direct video memory output at `0xB8000` with color support
 - **IDT & PIC** — Full interrupt descriptor table with remapped PIC (IRQ 0–15 mapped to IDT 32–47)
+- **Keyboard Driver** — IRQ 1 handler for keyboard input
 - **PIT Timer** — Programmable interval timer at 100Hz (10ms intervals) driving the scheduler
 - **Dynamic Heap** — Custom `kmalloc`/`kfree` with block headers, 8-byte alignment, and coalescing free blocks
 - **Preemptive Multitasking** — Round-robin scheduler with timer-driven context switching
@@ -16,6 +21,7 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 - **Idle Process** — Always-running fallback process when all others sleep
 - **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0xC0100000` (higher-half kernel)
 - **System Calls** — `int 0x80` based dispatch using EAX as syscall code
+- **Boot Menu** — Interactive menu with Normal Boot, Safe Mode, and Recovery options
 
 ## Memory Layout
 

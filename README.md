@@ -20,7 +20,7 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 - **Fork** — Spawns child processes with independent stacks and unique PIDs (WIP)
 - **Idle Process** — Always-running fallback process when all others sleep
 - **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0x00100000` (low-half kernel)
-- **System Calls** — `int 0x80` based dispatch using EAX as syscall code
+- **System Calls** — `int 0x81` based dispatch using EAX as syscall code
 - **Boot Menu** — Interactive menu with Normal Boot, Safe Mode, and Recovery options
 - **Custom Filesystem** — A filesystem designed from scratch with meant to crash loud but keep data accessible (WIP) 
 
@@ -57,6 +57,7 @@ qemu-system-i386 -cdrom myos.iso
 ## Status
 
 Active development. Getting page allocation functionality in the kernel to work, so processes can request pages and run user space programs.
+
 
 
 

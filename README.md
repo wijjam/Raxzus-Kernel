@@ -25,7 +25,7 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 
 Clean boot sequence with structured `[OK]` output and live clock:
 
-![Boot Sequence](docs/boot_sequence.png)
+![Boot Sequence](docs/boot.png)
 
 Shell with working commands:
 
@@ -35,9 +35,9 @@ The kernel has opinions about bad memory access:
 
 ![Legendary Error](docs/legendary_error.png)
 
-And it will tell you when you do something wrong with the heap:
+Heap coalescing and reuse working correctly — merge test passing with the kernel still running after:
 
-![Heap Error](docs/heap_error.png)
+![Heap Merge Test](docs/heap_merge.png)
 
 ## Memory Layout
 ```

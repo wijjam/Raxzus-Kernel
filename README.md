@@ -17,11 +17,12 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 - **Preemptive Multitasking** — Round-robin scheduler with timer-driven context switching
 - **Context Switching** — ESP-based process switching via assembly, saving/restoring full CPU state
 - **Process Control Block (PCB)** — Tracks saved ESP, PID, and process state
-- **Fork** — Spawns child processes with independent stacks and unique PIDs
+- **Fork** — Spawns child processes with independent stacks and unique PIDs (WIP)
 - **Idle Process** — Always-running fallback process when all others sleep
-- **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0xC0100000` (higher-half kernel)
+- **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0x00100000` (low-half kernel)
 - **System Calls** — `int 0x80` based dispatch using EAX as syscall code
 - **Boot Menu** — Interactive menu with Normal Boot, Safe Mode, and Recovery options
+- **Custom Filesystem** — A filesystem designed from scratch with meant to crash loud but keep data accecable (WIP) 
 
 ## Memory Layout
 
@@ -58,3 +59,4 @@ qemu-system-i386 -cdrom myos.iso
 ## Status
 
 Active development. Current focus: higher-half kernel and virtual memory.
+

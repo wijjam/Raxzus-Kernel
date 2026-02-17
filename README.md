@@ -22,7 +22,7 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 - **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0x00100000` (low-half kernel)
 - **System Calls** — `int 0x80` based dispatch using EAX as syscall code
 - **Boot Menu** — Interactive menu with Normal Boot, Safe Mode, and Recovery options
-- **Custom Filesystem** — A filesystem designed from scratch with meant to crash loud but keep data accecable (WIP) 
+- **Custom Filesystem** — A filesystem designed from scratch with meant to crash loud but keep data accessible (WIP) 
 
 ## Memory Layout
 
@@ -30,8 +30,6 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 [ GRUB Bootloader ] [ Kernel ] [ Paging Tables ] [ Heap (1MB) ]
   0x00100000          ~1MB+       After kernel       After paging
 ```
-
-After paging is enabled, the kernel is mapped to virtual address `0xC0100000` while physical memory starts at `0x00100000`.
 
 ## Building & Running
 
@@ -58,5 +56,6 @@ qemu-system-i386 -cdrom myos.iso
 
 ## Status
 
-Active development. Current focus: higher-half kernel and virtual memory.
+Active development. Getting page allocation functionality in the kernel to work, so processes can request pages and run user space programms.
+
 

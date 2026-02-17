@@ -24,15 +24,21 @@
 #define ALLOCATED 0x1
 #define FREE 0
 
-
+ 
 // We will construct the heap like a linked list.
 typedef struct heap {
     uint32_t size; // How big is this memory block.
-    //uint32_t flag; // Is memory free or not?
     uint32_t prev_size; // The previous blocks size
-    //uint32_t magic; // Is it the first header, a middle header, or a merged header?
 
-} __attribute__((packed));
+};
+
+typedef struct free_list {
+    uint32_t size;
+    uint32_t prev_size; 
+    uint32_t next_free_ptr;
+    uint32_t prev_free_ptr;
+
+};
 
 int get_flag(uint32_t size);
 int get_magic(uint32_t size);

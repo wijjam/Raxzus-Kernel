@@ -3,10 +3,26 @@
 
 
 extern _end[];
+// NOTE: Do not make this static
+struct free_list* free_list_head;
 // This below finds the end of kernel memory address
 volatile struct heap* start_heap_memory = (volatile struct heap*) _end;
+volatile struct free_list* start_heap_memory_free = (volatile struct free_list*) _end;
 // heap_end is now 16-bytes for the header memory and 8-bytes for data memory from the end
-struct heap* heap_end = ((struct heap*)((char*)((volatile struct heap*) _end) + HEAP_SIZE - sizeof(struct heap) - 8));
+struct heap* heap_end = ((struct heap*)((char*)((volatile struct heap*) _end) + HEAP_SIZE - sizeof(struct free_list) - 8));
+
+void init_free_list() {
+    /*
+    start_heap_memory_free->size = HEAP_SIZE; // Here we give the heap 1MB, which includes all the headers
+    start_heap_memory_free->prev_size = 0;
+    set_flag(&(start_heap_memory_free->size), FREE);
+    set_magic(&(start_heap_memory_free->size), MAGIC_FIRST);
+    The above will be set with the normal start_heap_memory since the offset is the same so it will act like a uninon.
+    */
+    free_list_head->prev_free_ptr = (void*)0;
+    free_list_head->next_free_ptr = start_heap_memory_free;
+
+}
 
 
 void heap_init() {
@@ -15,9 +31,10 @@ void heap_init() {
     start_heap_memory->prev_size = 0;
     set_flag(&(start_heap_memory->size), FREE);
     set_magic(&(start_heap_memory->size), MAGIC_FIRST);
+    init_free_list();
 
     kprintf_white("[MEM] Initial heap size: %d\n", start_heap_memory->size);
-    kprintf_white("[MEM] The sizeof heap: %d\n", sizeof(struct heap));
+    kprintf_white("[MEM] The sizeof heap: %d\n", sizeof(struct free_list));
     //kprintf_white("[MEM] The end of the heap total: %d", (char*)start_heap_memory + HEAP_SIZE);
     //kprintf_green("........[OK]\n");
     //kprintf_white("[MEM] The end of the heap with header and memory space: %d", heap_end);
@@ -27,14 +44,14 @@ void heap_init() {
 }
 
 void* kmalloc(uint32_t size) {
-    struct heap* current_block = start_heap_memory;
+    struct free_list* current_block_free = start_heap_memory_free;
     //full_size_request is the real size the user is asking for. So they size they want for memory and then the hidden head.
     size = (size + 7) & ~7;
-    uint32_t full_size_request = size + sizeof(struct heap);
+    uint32_t full_size_request = size + sizeof(struct free_list);
 
     full_size_request = (full_size_request + 7) & ~7;
 
-    if (full_size_request > HEAP_SIZE-sizeof(struct heap)) {
+    if (full_size_request > HEAP_SIZE-sizeof(struct free_list)) {
         kprintf_red("Requested size exceeds available heap size.\n");
         __asm__ volatile("hlt");
         return (void*)0;  // Too big for heap
@@ -46,47 +63,64 @@ void* kmalloc(uint32_t size) {
         __asm__ volatile("hlt");
         return (void*)0;
     }
-   
-    while (current_block < heap_end) {
+
+    while (current_block_free->next_free_ptr != (*void)0) {
+
+        if (full_size_request <= current_block_free->size) {
+            // create new free list node and place new size value into it (remember flags)
+            // Remove node from free list,
+            // check if this is the first block with first magic flag
+            // cast to heap header
+            // make prevous size to current_size - old_size
+        }
+        // make current_block_free into next_free_ptr
+
+    }
 
 
-        uint8_t flag = get_flag(current_block->size);
-        uint8_t magic = get_magic(current_block->size);
 
-        uint32_t data_size = current_block->size - sizeof(struct heap);
+
+
+
+   /*
+    while (current_block_free->next_free_ptr != (void*)0) {
+
+
+        uint8_t flag = get_flag(current_block_free->size);
+        uint8_t magic = get_magic(current_block_free->size);
+
+        uint32_t data_size = current_block_free->size - sizeof(struct free_list);
         
         // If the current block is free we pass into this check.
         // // We do not check for magic last because heap_end should not be able to get down here. But extra percasun
 
-        if (flag == 0 && (magic == MAGIC_FIRST || magic == MAGIC_MIDDLE)) {
-            
             // if the free block has memory enough for the requested size then we pass into this check.
             if (data_size >= full_size_request) {
                 
-                 uint32_t old_full_size = current_block->size;
+                 uint32_t old_full_size = current_block_free->size;
                  //kprintf("The old full size when initialized: %d\n", old_full_size);
                 // We check if the first block is the one we are checking. if it is we do not change the magic.
                 
-                if (current_block->prev_size == 0) {
+                if (current_block_free->prev_size == 0) {
                     
                     // The old full size is what will save and the be used to get the new size for the new block being split.
                     
-                    current_block->prev_size = 0;
-                    current_block->size = full_size_request;
-                    set_flag(&(current_block->size), ALLOCATED);
-                    set_magic(&(current_block->size), MAGIC_FIRST);
+                    current_block_free->prev_size = 0;
+                    current_block_free->size = full_size_request;
+                    set_flag(&(current_block_free->size), ALLOCATED);
+                    set_magic(&(current_block_free->size), MAGIC_FIRST);
 
                 } else {
                     // Implement logic to continue spliting and changing when not at the begining later here.
                     
-                    current_block->size = full_size_request;
-                    set_flag(&(current_block->size), ALLOCATED);
-                    set_magic(&(current_block->size), MAGIC_MIDDLE);
+                    current_block_free->size = full_size_request;
+                    set_flag(&(current_block_free->size), ALLOCATED);
+                    set_magic(&(current_block_free->size), MAGIC_MIDDLE);
 
                 }
                 // With this we move forward with just the requested size.
-                current_block = (struct heap*)((char*)current_block + get_true_size(current_block->size));
-
+                //current_block = (struct heap*)((char*)current_block + get_true_size(current_block->size));
+                free_list_head->
 
                 flag = get_flag(current_block->size);
                 magic = get_magic(current_block->size);
@@ -110,12 +144,9 @@ void* kmalloc(uint32_t size) {
                     
                 }
 
-                //kprintf("\nThe addresses we get from malloc are: %d\n", ((char*)current_block - current_block->prev_size) + sizeof(struct heap));
-                return ((char*)current_block - current_block->prev_size) + sizeof(struct heap);
+                //kprintf("\nThe addresses we get from malloc are: %d\n", ((char*)current_block - current_block->prev_size) + sizeof(struct free_list));
+                return ((char*)current_block - current_block->prev_size) + sizeof(struct free_list);
             }
-            
-
-        }
 
         
         
@@ -132,6 +163,7 @@ void* kmalloc(uint32_t size) {
     }
 
     return (void*)0;
+    */
 }
 
 
@@ -146,7 +178,7 @@ void free(void* pointer) {
         return;
     }
     // Checking if the current header gotten from the pointer is in the heap memory
-    struct heap* current_block = (struct heap*)((char*)pointer - sizeof(struct heap));
+    struct heap* current_block = (struct heap*)((char*)pointer - sizeof(struct free_list));
     if (current_block < start_heap_memory) {
         kprintf_red("\n Sorry but you are trying to free a block that is out of bounds 2\n");
         
@@ -171,7 +203,7 @@ void free(void* pointer) {
         __asm__ volatile("hlt");
         return;
     }
-    if (flag == 0) {
+    if (flag == FREE) {
         kprintf_red("\n Warning: Double-free attempt detected.\n");
         
         return;
@@ -197,7 +229,7 @@ void free(void* pointer) {
         
         // Stop once we reach the left most block
         //kprintf("\n=========Just before the first loop =============\n");
-        while (get_flag(prev_block->size) == 0) {
+        while (get_flag(prev_block->size) == FREE) {
             flag = get_flag(prev_block->size);
             magic = get_magic(prev_block->size);
             //kprintf("The current size is: %d and the address is: %x\n", get_true_size(prev_block->size), prev_block);
@@ -259,7 +291,7 @@ void free(void* pointer) {
         //kprintf("2 The start block and current block size is: %d the next block size is: %d\n", current_block->size, next_block->size);
         
         //kprintf("The flag of next is: %d and magic of next is: %d, and size: %d", flag, magic,get_true_size(next_block->size));
-        if (flag == 0 && magic != MAGIC_GONE) {
+        if (flag == FREE && magic != MAGIC_GONE) {
             //kprintf("The next block size is: %d\n", next_block->size);
             start_block->size += get_true_size(next_block->size);
             set_magic(&(next_block->size), MAGIC_GONE);

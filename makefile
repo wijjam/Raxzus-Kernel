@@ -109,7 +109,7 @@ version:
 # Count lines of code
 count:
 	@echo "Lines of code:"
-	@find . -name '*.c' -o -name '*.h' -o -name '*.s' | xargs wc -l
+	@wc -l *.c *.h *.s lib/*.c lib/*.h include/*.h 2>/dev/null | tail -1
 
 # Declare phony targets (not actual files)
 .PHONY: all clean distclean run debug run-serial help install rebuild version count

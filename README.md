@@ -56,6 +56,7 @@ qemu-system-i386 -cdrom myos.iso
 
 ## Status
 
-Active development. Getting page allocation functionality in the kernel to work, so processes can request pages and run user space programms.
+Active development. Getting page allocation functionality in the kernel to work, so processes can request pages and run user space programs.
+
 
 

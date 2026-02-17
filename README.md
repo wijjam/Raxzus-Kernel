@@ -1,13 +1,10 @@
 # Raxzer OS — Custom x86 Kernel
-
 A monolithic x86 kernel built from scratch in C and Assembly. This is a personal learning project aimed at understanding how operating systems work at the lowest level — from bootloading to virtual memory.
 
 ## Boot Screen
-
 ![RaxzusOS Boot Sequence](docs/boot.png)
 
 ## Features
-
 - **Bootloader** — GRUB multiboot, boots via ISO in QEMU
 - **VGA Text Mode** — Direct video memory output at `0xB8000` with color support
 - **IDT & PIC** — Full interrupt descriptor table with remapped PIC (IRQ 0–15 mapped to IDT 32–47)
@@ -22,17 +19,33 @@ A monolithic x86 kernel built from scratch in C and Assembly. This is a personal
 - **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0x00100000` (low-half kernel)
 - **System Calls** — `int 0x81` based dispatch using EAX as syscall code
 - **Boot Menu** — Interactive menu with Normal Boot, Safe Mode, and Recovery options
-- **Custom Filesystem** — A filesystem designed from scratch with meant to crash loud but keep data accessible (WIP) 
+- **Custom Filesystem** — Designed from scratch to crash loud but keep data accessible (WIP)
+
+## Screenshots
+
+Clean boot sequence with structured `[OK]` output and live clock:
+
+![Boot Sequence](docs/boot_sequence.png)
+
+Shell with working commands:
+
+![Shell](docs/shell.png)
+
+The kernel has opinions about bad memory access:
+
+![Legendary Error](docs/legendary_error.png)
+
+And it will tell you when you do something wrong with the heap:
+
+![Heap Error](docs/heap_error.png)
 
 ## Memory Layout
-
 ```
 [ GRUB Bootloader ] [ Kernel ] [ Paging Tables ] [ Heap (1MB) ]
   0x00100000          ~1MB+       After kernel       After paging
 ```
 
 ## Building & Running
-
 > Requires: `i686-elf-gcc`, `nasm`, `grub-mkrescue`, `qemu-system-i386`
 
 ```bash
@@ -49,15 +62,9 @@ qemu-system-i386 -cdrom myos.iso
 ```
 
 ## Tech Stack
-
 - **Language:** C, x86 Assembly
 - **Toolchain:** i686-elf-gcc, NASM, GRUB, QEMU
 - **Architecture:** x86 (32-bit protected mode)
 
 ## Status
-
-Active development. Getting page allocation functionality in the kernel to work, so processes can request pages and run user space programs.
-
-
-
-
+Active development. Currently implementing page allocation so processes can request memory pages and run userspace programs.

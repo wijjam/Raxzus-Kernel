@@ -41,8 +41,34 @@ void cmd_help(void) {
 
 }
 
+static const char* RaxzusDragon[] = {
+    "              /-------\\ ",
+    " /-\\        /  (*)  \\",
+    "| ) )-------- _         \\",
+    "|        ____/_/\\_____ /",
+    " \\/----/____/         | ",
+    " /\\/---/           ___|",
+    " |          _______/ ",
+    "  \\_______/",
+    0
+};
+
+
 void cmd_neofetch(void) {
-    kprintf("\n========\n");
+    kprintf("\n");
+    int i = 0;
+    while (RaxzusDragon[i] != 0) {
+        kprintf_green("%s", RaxzusDragon[i]);
+
+        if (i == 2) kprintf_light_gray("   OS: RaxzusOS v1.0");
+        if (i == 3) kprintf_light_gray("   Kernel: Raxzus_kernel");
+        if (i == 4) kprintf_light_gray("   Shell: RaxShell");
+        if (i == 5) kprintf_light_gray("   Uptime: Too powerful to measure");
+        kprintf("\n");
+        i++;
+    }
+    kprintf("\n");
+
 }
 
 void boot_intro(void) {

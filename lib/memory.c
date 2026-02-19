@@ -346,7 +346,7 @@ kprintf("\n========== MERGE STRESS TEST ==========\n");
     kfree(a);
     kfree(b);
     kfree(c);
-    kprintf("Freed all - should be ONE big block\n");
+    kprintf("Freed all - should be one big block and processes remaining\n");
     print_heap();
     
     // Test 2: Merge backwards (free i omvänd ordning)
@@ -404,7 +404,7 @@ kprintf("\n========== MERGE STRESS TEST ==========\n");
     
     kfree(a);
     kfree(e);
-    kprintf("Freed rest - should be ONE block\n");
+    kprintf("Freed all - should be one big block and processes remaining\n");
     print_heap();
     
     // Test 5: Reuse after merge

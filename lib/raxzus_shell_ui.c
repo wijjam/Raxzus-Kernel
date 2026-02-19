@@ -5,7 +5,7 @@
 int checkString(char* input, char* compareString) {
     
     int i = 0;
-    while (input[i] != '\0' || compareString[i] != '\0') {
+    while (input[i] != '\0' && compareString[i] != '\0') {
         if (input[i] != compareString[i]) {
             return 0;
         }

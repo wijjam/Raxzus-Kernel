@@ -39,6 +39,10 @@ Heap coalescing and reuse working correctly — merge test passing with the kern
 
 ![Heap Merge Test](docs/heap_merge.png)
 
+The kernel also has a custom neofetch with a custom logo:
+
+![shell_neofetch](docs/shell_neofetch.png)
+
 ## Memory Layout
 ```
 [ GRUB Bootloader ] [ Kernel ] [ Paging Tables ] [ Heap (1MB) ]
@@ -67,4 +71,5 @@ qemu-system-i386 -cdrom myos.iso
 - **Architecture:** x86 (32-bit protected mode)
 
 ## Status
+
 Active development. Currently implementing page allocation so processes can request memory pages and run userspace programs.

@@ -31,12 +31,10 @@ void install_idt(void) {
         idt[i].flags = 0;
     }
 
-    // Tells the CPU to use our IDT instead of the BIOS's
-    __asm__ volatile ("lidt %0" : : "m" (idtp));
-
 }
 
 void init_interrupts(void) {
+    kprintf("init_interrupts called! IDT at: %x\n", (uint32_t)&idt);
     kprintf_white("[INIT] Setting up interrupts....");
     
     // Check current code segment
@@ -45,7 +43,6 @@ void init_interrupts(void) {
     //kprintf("Current code segment: %d\n", cs);
     
     install_idt();
-    setup_time(11932); // makes it so we get 1 interrupt per 10ms
     
     // Use the actual current code segment instead of assuming 0x08
     set_idt_entry(129, (uint32_t)isr_wrapper_129, cs, 0x8E); // The system call interrupt
@@ -54,6 +51,20 @@ void init_interrupts(void) {
     set_idt_entry(0, (uint32_t)isr_wrapper_0, cs, 0x8E); // Interrupt for divide with 0
     set_idt_entry(13, (uint32_t)isr_wrapper_13, cs, 0x8E); // Interrupt for general purpose exeptions
     set_idt_entry(14, (uint32_t)isr_wrapper_14, cs, 0x8E); // Interrupt for page fault
+    set_idt_entry(8, (uint32_t)isr_wrapper_8, cs, 0x8E); // Interrupt for double fault
+
+    
+
+        // Tells the CPU to use our IDT instead of the BIOS's
+    __asm__ volatile ("lidt %0" : : "m" (idtp));
+
+    setup_time(11932); // makes it so we get 1 interrupt per 10ms
+
+
+    kprintf("isr_wrapper_32 addr: %x\n", (uint32_t)isr_wrapper_32);
+kprintf("IDT[32] low: %x high: %x\n", idt[32].base_low, idt[32].base_high);
+uint32_t reconstructed = idt[32].base_low | (idt[32].base_high << 16);
+kprintf("IDT[32] reconstructed: %x\n", reconstructed);
 
     kprintf_green("[OK]\n");
 }

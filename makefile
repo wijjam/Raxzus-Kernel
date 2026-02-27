@@ -5,7 +5,7 @@ LD = i686-elf-gcc
 
 # Compiler flags
 CFLAGS = -std=gnu99 -ffreestanding -O2 -Wall -Wextra -Iinclude
-LDFLAGS = -T linker.ld -ffreestanding -O2 -nostdlib -lgcc
+LDFLAGS = -T linker.ld -ffreestanding -O2 -nostdlib -nostartfiles -nodefaultlibs -lgcc
 
 # Source files
 ASM_SOURCES = boot.s interrupt_stubs.s
@@ -41,7 +41,7 @@ $(ISO): $(KERNEL)
 # Link kernel
 $(KERNEL): $(OBJECTS)
 	@echo "Linking kernel..."
-	$(LD) $(LDFLAGS) -o $(KERNEL) $(OBJECTS)
+	$(LD) $(LDFLAGS) -o $(KERNEL) boot.o $(filter-out boot.o, $(OBJECTS))
 	@echo "Kernel built: $(KERNEL)"
 
 # Compile C files
@@ -67,7 +67,7 @@ debug: $(ISO)
 # Run in QEMU with serial output
 run-serial: $(ISO)
 	@echo "Starting QEMU with serial output..."
-	qemu-system-i386 -cdrom $(ISO) -serial stdio
+	qemu-system-i386 -cdrom $(ISO) -serial stdio -m 4G
 
 # Clean build artifacts
 clean:

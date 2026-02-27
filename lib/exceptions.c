@@ -9,15 +9,16 @@ void divide_by_zero_handler() {
     kprintf("%e a/b = c => cb = a => 0 = cb - a (a can not be 0 since 0/0 is a whole other torture.) When in 0 = cb - a where a can't be 0 can it become true?");
     kprintf("%e Never think about it doing 0 = cb - a would be infinite and the cpu would be stuck in a loop.\n");
     kprintf("%e and you just like... divide by zero? That is not nice.\n");
-    while (1) {} // Halt the system or perform other error handling
+    __asm__ volatile("hlt");
 }
 
 void page_fault_handler(uint32_t* stack) {
 
-
     struct registers *regs = (struct registers*)stack;
 
     uint32_t error_code = regs->err_code;
+
+    kprintf("=============== The ESP is: %x ===============\n", stack);
 
     uint32_t faulting_address;
     __asm__ volatile("mov %%cr2, %0" : "=r"(faulting_address));
@@ -38,7 +39,7 @@ void page_fault_handler(uint32_t* stack) {
         kprintf("-> %eUser code tried to access kernel memory. Nice try buddy.\n");
     }
     
-    while (1) {}
+    __asm__ volatile("hlt");
 }
 void general_protection_fault_handler(uint32_t* stack) {
 
@@ -80,6 +81,30 @@ void general_protection_fault_handler(uint32_t* stack) {
         kprintf("-> %e Congrats you found a legendary error, but like this is not pokemon... good luck debging you need it.\n");
     }
     kprintf("\nHalting the system...\n");
-    while (1) {} // Halt the system or perform other error handling
+    __asm__ volatile("hlt");
+}
+
+
+// This is your emergency "Black Box" recorder
+void double_fault_handler(uint32_t error_code) {
+    // Switch to a safe color (Red/White) to indicate total failure
+    set_color(make_color(COLOR_WHITE, COLOR_RED));
+    
+    clearScreen();
+    kprintf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    kprintf("!!!          CRITICAL: DOUBLE FAULT          !!!\n");
+    kprintf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    kprintf("\nError Code: %x\n", error_code);
+    kprintf("The CPU encountered a fault while trying to\n");
+    kprintf("handle a previous fault. Likely causes:\n");
+    kprintf("1. Kernel Stack Overflow\n");
+    kprintf("2. IDT/GDT pointing to unmapped memory\n");
+    kprintf("3. Recursive Page Faults\n");
+
+    // We CANNOT return from a double fault. 
+    // The state of the CPU is too corrupted.
+    while(1) {
+        __asm__ volatile("hlt");
+    }
 }
 

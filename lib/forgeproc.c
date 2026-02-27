@@ -6,6 +6,7 @@ void sleep(int time) {
 
     if (time <= 0) {
         kprintf("%e you can not make a process sleep: %d ms", time*10);
+        return;
     }
 
     asm volatile(
@@ -43,7 +44,7 @@ void system_call_interrupt_handler(uint32_t* stack) {
     switch (regs->eax) {
         case 1:
             current_process->sleep_time = regs->ebx;
-            //kprintf("%d", current_process->sleep_time);
+            kprintf("%d", current_process->sleep_time);
             schedule();
             need_reschedule = 1;
         break;

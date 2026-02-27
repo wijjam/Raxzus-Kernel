@@ -31,6 +31,11 @@ typedef struct registers { // This is a map for the stack. Nothing more
 
 typedef struct PCB {
     uint32_t saved_esp;
+    uint32_t* page_dir;
+    uint32_t heap_start;
+    uint32_t heap_end;
+    uint32_t stack_top;
+    uint32_t next_virt;
     struct registers reg;
     uint32_t PID;
     int sleep_time;

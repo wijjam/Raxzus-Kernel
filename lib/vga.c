@@ -3,7 +3,7 @@
 #include "../include/rtc.h"
 #include "../include/keyboard.h"
 
-volatile char* video_memory = (volatile char*)0xB8000;
+char* video_memory =  (uint16_t*)0xC00B8000;
 int cursor_row = 0;
 int cursor_col = 0;
 

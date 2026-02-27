@@ -11,6 +11,15 @@ int checkString(char* input, char* compareString) {
         }
         i++;
     }
+
+    if (input[i] != '\0' && compareString[i] == '\0') {
+        return 0;
+    }
+
+    if (input[i] == '\0' && compareString[i] != '\0') {
+        return 0;
+    }
+
     return 1;
 }
 

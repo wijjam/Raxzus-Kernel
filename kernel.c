@@ -22,7 +22,7 @@ void idle_process() {
        while(1) {
         // Do nothing, or print "IDLE" 
         // This keeps the CPU busy when all real processes sleep
-        
+        //kprintf("Hello this is idle\n");
         __asm__ volatile("hlt");
     }
 }
@@ -31,14 +31,14 @@ void timer_process_worker() {
 
     while(1) {
         update_print_corner_time();
-        sleep(5900); // 100 is 1 second. 
+        sleep(100); // 100 is 1 second. 
     }
 }
 
 void worker_process() {
     while(1) {
-        kprintf("WORKER ALIVE with PID: %d\n", current_process->PID);
-        //sleep(5);
+        kprintf("We are printing with process: %x\n", current_process->PID);
+        
     }
 }
 
@@ -83,18 +83,21 @@ void kernel_main(void) {
     //kprintf("The current_process before idle is: %x\n", current_process);  
 
     init_process_scheduler(&idle_process);
+
     //kprintf("The current_process after idle is: %x\n", current_process);
     //create_process(&timer_process_worker);
+
     create_process(&worker_process);
+
+        __asm__ volatile ("sti"); // opens the flood gates.
+    pic_enable_irq(0); // Enable timer
    
     //kprintf("worker_process addr: %x\n", (uint32_t)worker_process);
 
     //boot_intro();
     kprintf_cyan("RaxzusOS > ");
 
-    __asm__ volatile ("sti"); // opens the flood gates.
-    pic_enable_irq(0); // Enable timer
-     pic_disable_irq(0); // Enable timer
+
     // Main kernel loop - just wait for interrupts
     while (1) {
         // Do nothing - let interrupts handle everything

@@ -1,4 +1,5 @@
 .section .text
+.global isr_wrapper_130
 .global isr_wrapper_129
 .global isr_wrapper_33
 .global isr_wrapper_32
@@ -18,14 +19,35 @@ isr_wrapper_33:
     iret                            # Return from interrupt
 
 
+# New Process switch interrupt wrapper
+isr_wrapper_130:
+
+
+    pusha
+    call switch_interrupt_handler
+    
+    # LOAD next ESP
+    movl current_process, %ebx
+
+    #movl %ebx, %esp
+
+
+    movl 4(%ebx), %ecx         # load page_dir value into ecx
+    subl $0xC0000000, %ecx
+    movl %ecx, %cr3            # now move from register to CR3
+
+
+    popa
+    iret
+
+
+
 # New timer interrupt wrapper (IRQ 0 = interrupt 32)
 isr_wrapper_32:
     
     pusha
-    movl %esp, %ebx
-    pushl %ebx
+    movl %esp, esp_address_variable
     call timer_interrupt_handler
-
     # Compare current and next
     movl current_process, %eax
     movl next_process, %ebx
@@ -38,17 +60,18 @@ isr_wrapper_32:
     # LOAD next ESP
     movl (%ebx), %esp
 
-    
     # Update current_process
     movl %ebx, current_process
 
     movl 4(%ebx), %ecx         # load page_dir value into ecx
     subl $0xC0000000, %ecx
     movl %ecx, %cr3            # now move from register to CR3
+    
 
 skip_switch:
-    popa
+
     addl $4, %esp
+    popa
     iret
 
 # System call interrupt wrapper (IRQ 128 = interrupt 129)

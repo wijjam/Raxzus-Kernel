@@ -34,7 +34,6 @@ void install_idt(void) {
 }
 
 void init_interrupts(void) {
-    kprintf("init_interrupts called! IDT at: %x\n", (uint32_t)&idt);
     kprintf_white("[INIT] Setting up interrupts....");
     
     // Check current code segment
@@ -45,7 +44,8 @@ void init_interrupts(void) {
     install_idt();
     
     // Use the actual current code segment instead of assuming 0x08
-    set_idt_entry(129, (uint32_t)isr_wrapper_129, cs, 0x8E); // The system call interrupt
+    set_idt_entry(129, (uint32_t)isr_wrapper_129, cs, 0x8E); // The system call interrupt int 0x81
+    set_idt_entry(130, (uint32_t)isr_wrapper_130, cs, 0x8E); // The process switch interrupt int 0x82
     set_idt_entry(33, (uint32_t)isr_wrapper_33, cs, 0x8E); // Keyboard interrupt
     set_idt_entry(32, (uint32_t)isr_wrapper_32, cs, 0x8E); // interrupt timer interrupt
     set_idt_entry(0, (uint32_t)isr_wrapper_0, cs, 0x8E); // Interrupt for divide with 0
@@ -59,12 +59,6 @@ void init_interrupts(void) {
     __asm__ volatile ("lidt %0" : : "m" (idtp));
 
     setup_time(11932); // makes it so we get 1 interrupt per 10ms
-
-
-    kprintf("isr_wrapper_32 addr: %x\n", (uint32_t)isr_wrapper_32);
-kprintf("IDT[32] low: %x high: %x\n", idt[32].base_low, idt[32].base_high);
-uint32_t reconstructed = idt[32].base_low | (idt[32].base_high << 16);
-kprintf("IDT[32] reconstructed: %x\n", reconstructed);
 
     kprintf_green("[OK]\n");
 }

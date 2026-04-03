@@ -4,7 +4,9 @@ AS = i686-elf-as
 LD = i686-elf-gcc
 
 # Compiler flags
-CFLAGS = -std=gnu99 -ffreestanding -O2 -Wall -Wextra -Iinclude
+CFLAGS = -std=gnu99 -ffreestanding -O2 -Wall -Wextra -Iinclude -g
+
+# Linker flags  
 LDFLAGS = -T linker.ld -ffreestanding -O2 -nostdlib -nostartfiles -nodefaultlibs -lgcc
 
 # Source files
@@ -17,6 +19,7 @@ C_OBJECTS = $(C_SOURCES:.c=.o)
 OBJECTS = $(ASM_OBJECTS) $(C_OBJECTS)
 
 # Output files
+KERNEL_ELF = myos.elf
 KERNEL = myos.bin
 ISO = myos.iso
 
@@ -38,11 +41,16 @@ $(ISO): $(KERNEL)
 	@grub-mkrescue -o $(ISO) isodir 2>/dev/null || grub-mkrescue -o $(ISO) isodir
 	@echo "ISO created: $(ISO)"
 
-# Link kernel
-$(KERNEL): $(OBJECTS)
+# Create binary from ELF (for bootloader)
+$(KERNEL): $(KERNEL_ELF)
+	@echo "Creating binary from ELF..."
+	@cp $(KERNEL_ELF) $(KERNEL)
+
+# Link kernel (creates ELF with debug symbols)
+$(KERNEL_ELF): $(OBJECTS)
 	@echo "Linking kernel..."
-	$(LD) $(LDFLAGS) -o $(KERNEL) boot.o $(filter-out boot.o, $(OBJECTS))
-	@echo "Kernel built: $(KERNEL)"
+	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) boot.o $(filter-out boot.o, $(OBJECTS))
+	@echo "Kernel ELF built: $(KERNEL_ELF)"
 
 # Compile C files
 %.o: %.c
@@ -72,7 +80,7 @@ run-serial: $(ISO)
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -f $(OBJECTS) $(KERNEL) $(ISO)
+	@rm -f $(OBJECTS) $(KERNEL) $(KERNEL_ELF) $(ISO)
 	@rm -rf isodir
 	@echo "Clean complete"
 
@@ -110,6 +118,13 @@ version:
 count:
 	@echo "Lines of code:"
 	@wc -l *.c *.h *.s lib/*.c lib/*.h include/*.h 2>/dev/null | tail -1
+
+# Run with GDB debugging
+gdb: $(ISO)
+	@echo "Starting QEMU with GDB server..."
+	@echo "In another terminal, run: gdb myos.elf"
+	@echo "Then type: target remote localhost:1234"
+	qemu-system-i386 -s -S -cdrom $(ISO)
 
 # Declare phony targets (not actual files)
 .PHONY: all clean distclean run debug run-serial help install rebuild version count

@@ -54,5 +54,7 @@ void init_process_scheduler(void (*func)());
 
 void schedule();
 
+void debug_print_esp(uint32_t esp_val);
+
 
 #endif

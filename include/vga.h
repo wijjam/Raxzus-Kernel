@@ -51,5 +51,6 @@ void backspace();
 void update_print_corner_time();
 void cursor_blinker();
 void remove_stuck_blinker();
+void dump_stack_before_iret(uint32_t* sp);
 
 #endif

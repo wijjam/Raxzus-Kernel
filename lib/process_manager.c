@@ -5,7 +5,6 @@
 #include "../include/paging_manager.h"
 #include "../include/pmm.h"
 
-void process_wrapper(void (*func)());
 
 struct PCB* current_process;
 struct PCB* next_process;
@@ -18,21 +17,34 @@ uint32_t blink_counter = 0;
 
 //struct PCB process_lists[1000];
 
-void timer_interrupt_handler(uint32_t esp_address_variable) {
-            
+uint32_t* esp_address_variable;
+
+uint32_t count = 0;
+
+void timer_interrupt_handler() {
+
         // The round robbin functionality
         struct registers* stack = (struct registers *)esp_address_variable; 
-    
+        
+
+        count++;
+
         //kprintf("ESP: %x\n", esp_address_variable);
-        kprintf("I someone there?!!!!!\n");
+        //kprintf("I someone there?!!!!!\n");
+
+
+        //kprintf("Current_process: %x\n", current_process);
+        //kprintf(" Next_process%x", next_process);
 
         blink_counter++;
         if (blink_counter >= 50) {
             cursor_blinker();
             blink_counter = 0;
         }
-        pic_send_eoi(0);
+        
         schedule();
+        
+
 
     
 
@@ -43,6 +55,9 @@ void timer_interrupt_handler(uint32_t esp_address_variable) {
 
 
 void create_process(void (*func)()) {
+
+    kprintf("A process is being created\n");
+
     struct PCB* new_process = (void*) kmalloc(sizeof(struct PCB));
 
     if (new_process == (void*)0) {return (void*)0;}
@@ -54,11 +69,12 @@ void create_process(void (*func)()) {
     new_process->next = (void*)0;
 
     new_process->prev = (void*)0;
+        __asm__ volatile("cli");  // disable interrupts
     
     
-new_process->page_dir = create_process_page_directory();
-//kprintf("Stored page_dir: %x\n", (uint32_t)new_process->page_dir);
-//kprintf("Returned from func: %x\n", (uint32_t)create_process_page_directory());
+    new_process->page_dir = create_process_page_directory();
+    //kprintf("Stored page_dir: %x\n", (uint32_t)new_process->page_dir);
+    //kprintf("Returned from func: %x\n", (uint32_t)create_process_page_directory());
 
     
 
@@ -67,7 +83,7 @@ new_process->page_dir = create_process_page_directory();
     new_process->heap_end = new_process->heap_start + get_heap_size();
     new_process->stack_top = 0xEFFFF000;    // Puts stack at the top
     
-
+    
 
 
 
@@ -92,7 +108,7 @@ new_process->page_dir = create_process_page_directory();
     *(--sp) = (uint32_t)actual_cs;      // CS <- ANVÄND RÄTT CS!
     *(--sp) = (uint32_t)func;            // argument to eip
 
-    //*(--sp) = 0x00; // ERROR CODE (ignored)
+    *(--sp) = 0x00; // ERROR CODE (ignored)
 
     // POPA frame
     *(--sp) = 0x00; // EAX
@@ -104,8 +120,8 @@ new_process->page_dir = create_process_page_directory();
     *(--sp) = 0x00; // ESI
     *(--sp) = 0x00; // EDI
     
-    uint32_t steps_traveled = 12;
-    new_process->saved_esp = 0xEFFFF000 + 4096 - (steps_traveled* 4);
+    new_process->saved_esp = 0xEFFFF000 + ((uint32_t)sp - (stack_phys + 0xC0000000));
+
 
     if (current_index == 0) {
         process_lists = new_process;
@@ -124,34 +140,51 @@ new_process->page_dir = create_process_page_directory();
 
     current->next = new_process;
     new_process->prev = current;
-    __asm__ volatile("cli");  // disable interrupts
+
     for (uint32_t virt = new_process->heap_start; virt < new_process->heap_end; virt += 4096) {
     
         //kprintf("The virtual page dir is: %x\n", current_process->page_dir);
         //kprintf("The virtual address to map is: %x\n", virt);
-
+        
         allocate_page(new_process->page_dir, virt, PAGE_USER);
         
         
     }
 
-    uint32_t* debug_sp = (uint32_t*)((stack_phys + 0xC0000000) + 4096);
-kprintf("=== STACK DUMP (top to bottom) ===\n");
-for (int i = 0; i < 20; i++) {
-    debug_sp--;
-    kprintf("sp[%d] = %x\n", i, *debug_sp);
+        uint32_t* debug_sp = (uint32_t*)((stack_phys + 0xC0000000) + 4096);
+    kprintf("=== STACK DUMP (top to bottom) ===\n");
+    kprintf("esp at: sp[0] = %x\n", debug_sp);
+    for (int i = 0; i < 4; i++) {
+        debug_sp--;
+        kprintf("sp[%d] = %x\n", i, *debug_sp);
 
-    if (*debug_sp != actual_cs && i == 1 ) {
-        kprintf_red("Fucking CS got corrupted again my guy.");
-        while(1){}
+        if (*debug_sp != actual_cs && i == 1 ) {
+            kprintf_red("Fucking CS got corrupted again my guy.");
+            while(1){}
+        }
+        if (*debug_sp != 0x202 && i == 0) {
+            kprintf_red("Fucking EFLAGS got corrupted again my guy!!!");
+            while(1){}
+        }
     }
-}
 
     //kprintf("func ptr is: %x\n", (uint32_t)func);
     __asm__ volatile("sti");  // re-enable interrupts
 
 
 }
+
+void debug_print_esp(uint32_t esp_val) {
+        kprintf("\n\nAbout to first switch\n");
+        kprintf("Worker saved_esp: %x\n", next_process->saved_esp);
+        
+        // Dump worker's stack
+        uint32_t* stack = (uint32_t*)next_process->saved_esp;
+        for (int i = 0; i < 15; i++) {
+            kprintf("  [%d] %x\n", i, stack[i]);
+        }
+}
+
 
 void init_process_scheduler(void (*func)()) {
     current_index = 0;
@@ -160,6 +193,12 @@ void init_process_scheduler(void (*func)()) {
 
     current_process = process_lists;
     next_process = process_lists;
+
+
+    
+
+    __asm__ volatile("int $0x82");
+
 }
 
 void schedule() {
@@ -170,7 +209,7 @@ void schedule() {
         if (sim_current->next != (void*)0) {
             next_process = sim_current->next;
             sim_current = next_process;
-            //kprintf("Hello");
+            kprintf("Hello");
            
         } else {
             next_process = process_lists;
@@ -186,7 +225,12 @@ void schedule() {
     } while (sim_current->sleep_time > 0);
 
     //__asm__ volatile("hlt");
+}
 
+
+void switch_interrupt_handler() {
+    // The switch functionality happens in the assembly stub.
+    pic_send_eoi(0);
 
 }
 

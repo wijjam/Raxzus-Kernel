@@ -339,3 +339,9 @@ void cursor_blinker(){
     }
 }
 
+
+void dump_stack_before_iret(uint32_t* sp) {
+    kprintf("PRE-IRET sp[0]=%x sp[1]=%x sp[2]=%x sp[3]=%x\n",
+        sp[0], sp[1], sp[2], sp[3]);
+}
+

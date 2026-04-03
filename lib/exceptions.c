@@ -17,8 +17,22 @@ void page_fault_handler(uint32_t* stack) {
     struct registers *regs = (struct registers*)stack;
 
     uint32_t error_code = regs->err_code;
+/*
+    kprintf("\n=============== The ESP is: %x ===============\n\n", stack);
+    
+    kprintf("EDI: %x\n", regs->edi);
+    kprintf("ESI: %x\n", regs->esi);
+    kprintf("EBP: %x\n", regs->ebp);
+    kprintf("ESP: %x\n", regs->esp);
+    kprintf("EBX: %x\n", regs->ebx);
+    kprintf("EDX: %x\n", regs->edx);
+    kprintf("ECX: %x\n", regs->ecx);
+    kprintf("EAX: %x\n", regs->eax);
 
-    kprintf("=============== The ESP is: %x ===============\n", stack);
+    kprintf("EIP: %x\n", regs->eip);
+    kprintf("CS: %x\n", regs->cs);
+    kprintf("EFLAGS: %x\n", regs->eflags);
+*/
 
     uint32_t faulting_address;
     __asm__ volatile("mov %%cr2, %0" : "=r"(faulting_address));
@@ -48,8 +62,13 @@ void general_protection_fault_handler(uint32_t* stack) {
 
     uint32_t error_code = regs->err_code;
 
-    kprintf("%e General protection fault exception occurred!\n");
+    kprintf("\nThe ESP was pointing at: %x\n", regs);
+    kprintf("The EIP was pointing at: %x\n", regs->eip);
+    kprintf("The CS was pointing at: %x\n", regs->cs);
+    kprintf("The EFLAG was pointing at: %x\n", regs->eflags); 
 
+    kprintf("%e General protection fault exception occurred!\n");
+    /*
     if (error_code == 0) {
         kprintf("-> %eBad instruction or memory access\n");
         kprintf("-> %eCheck: Stack pointer, EIP, memory addresses\n");
@@ -80,6 +99,7 @@ void general_protection_fault_handler(uint32_t* stack) {
         kprintf("-> %eWeird error code, good luck!\n");
         kprintf("-> %e Congrats you found a legendary error, but like this is not pokemon... good luck debging you need it.\n");
     }
+        */
     kprintf("\nHalting the system...\n");
     __asm__ volatile("hlt");
 }

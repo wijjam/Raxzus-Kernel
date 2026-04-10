@@ -3,7 +3,7 @@
 #include "../include/rtc.h"
 #include "../include/keyboard.h"
 
-volatile char* video_memory = (volatile char*)0xB8000;
+char* video_memory =  (uint16_t*)0xC00B8000;
 int cursor_row = 0;
 int cursor_col = 0;
 
@@ -337,5 +337,11 @@ void cursor_blinker(){
     } else {
         video_memory[position] = ' ';
     }
+}
+
+
+void dump_stack_before_iret(uint32_t* sp) {
+    kprintf("PRE-IRET sp[0]=%x sp[1]=%x sp[2]=%x sp[3]=%x\n",
+        sp[0], sp[1], sp[2], sp[3]);
 }
 

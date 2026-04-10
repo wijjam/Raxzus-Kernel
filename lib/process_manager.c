@@ -2,6 +2,8 @@
 #include "../include/vga.h"
 #include "../include/pic.h"
 #include "../include/memory.h"
+#include "../include/paging_manager.h"
+#include "../include/pmm.h"
 
 struct PCB* current_process;
 struct PCB* next_process;
@@ -14,7 +16,9 @@ uint32_t blink_counter = 0;
 
 //struct PCB process_lists[1000];
 
-void timer_interrupt_handler(uint32_t esp_address_variable) {
+uint32_t* esp_address_variable;
+
+void timer_interrupt_handler() {
             
         // The round robbin functionality
         //struct registers* stack = (struct registers *)esp_address_variable; 
@@ -35,69 +39,152 @@ void timer_interrupt_handler(uint32_t esp_address_variable) {
 
 void create_process(void (*func)()) {
 
-
     struct PCB* new_process = (void*) kmalloc(sizeof(struct PCB));
-
-    if (new_process == (void*)0) {return (void*)0;}
+    if (new_process == (void*)0) { return; }
 
     new_process->PID = current_index;
     new_process->sleep_time = 0;
     new_process->next = (void*)0;
     new_process->prev = (void*)0;
 
-    // Get ACTUAL CS from CPU
+    // =========================================================
+    // FIX 1: Give every process its own page directory.
+    //
+    // create_process_page_directory() allocates a fresh 4 KB
+    // physical frame, zeroes it, then copies the kernel's upper
+    // 256 entries (indices 768-1023, i.e. 0xC0000000 and above).
+    // That means every process can still reach kernel code/data,
+    // but the lower 3 GB are completely private to this process.
+    // =========================================================
+    uint32_t* proc_dir = create_process_page_directory();
+    new_process->page_dir = proc_dir;
+
+    // =========================================================
+    // FIX 2: Give every process its own private stack.
+    //
+    // We allocate a PHYSICAL page and map it at PROC_STACK_VIRT
+    // inside proc_dir.  That mapping does NOT exist in the kernel
+    // page directory or any other process's page directory, so the
+    // stack is truly isolated.
+    //
+    // While we are still running under the kernel's CR3 we can
+    // reach that physical page at (stack_phys + 0xC0000000).
+    // We build the fake interrupt frame there, then compute what
+    // the CPU will see as the stack pointer when it runs this
+    // process under proc_dir.
+    // =========================================================
+    uint32_t stack_phys = get_next_free_process_frame();
+    map_page(proc_dir, PROC_STACK_VIRT, stack_phys, PAGE_KERNEL);
+
     uint16_t actual_cs;
-    __asm__ volatile("mov %%cs, %0" : "=r"(actual_cs)); // Gets the CS from the cpu, no Assumsion!
+    __asm__ volatile("mov %%cs, %0" : "=r"(actual_cs));
 
-    uint8_t *stack = kmalloc(4096); // We allocate our custom stack frame to the heap.
-    if (stack == (void*)0) {return;} // we then check if it returns null, if the heap runs out we can not allocate a stack.
-    uint32_t *sp = (uint32_t*)(stack + 4096); // Since stack moves downward we make the stack pointer (esp) point at the top of the heap and then move down.
+    // Access the physical page through the kernel's identity window
+    uint32_t* sp = (uint32_t*)(stack_phys + 0xC0000000 + PROC_STACK_SIZE);
 
-    // IRET frame
-    *(--sp) = 0x202;          // EFLAGS
-    *(--sp) = actual_cs;      // CS <- ANVÄND RÄTT CS!
-    *(--sp) = (uint32_t)func; // EIP
+    // IRET frame (highest address - pushed first)
+    *(--sp) = 0x202;                 // EFLAGS: IF=1, reserved bit set
+    *(--sp) = (uint32_t)actual_cs;   // CS
+    *(--sp) = (uint32_t)func;        // EIP -> entry point of the process
 
-    *(--sp) = 0x00; // ERROR CODE (ignored)
+    // POPA frame (lower address - pushed second)
+    // popa pops: EDI, ESI, EBP, (skip ESP), EBX, EDX, ECX, EAX
+    *(--sp) = 0;  // EAX
+    *(--sp) = 0;  // ECX
+    *(--sp) = 0;  // EDX
+    *(--sp) = 0;  // EBX
+    *(--sp) = 0;  // ESP  (popa discards this dword, value irrelevant)
+    *(--sp) = 0;  // EBP
+    *(--sp) = 0;  // ESI
+    *(--sp) = 0;  // EDI  <- sp points here; this is saved_esp
 
-    // POPA frame
-    *(--sp) = 0x00; // EAX
-    *(--sp) = 0x00; // ECX
-    *(--sp) = 0x00; // EDX
-    *(--sp) = 0x00; // EBX
-    *(--sp) = 0x00; // ESP (ignored)
-    *(--sp) = 0x00; // EBP
-    *(--sp) = 0x00; // ESI
-    *(--sp) = 0x00; // EDI
+    // Convert the kernel-virtual sp to the process-virtual equivalent.
+    // The offset within the physical page is the same in both address
+    // spaces; only the base address differs.
+    uint32_t sp_offset = (uint32_t)sp - (stack_phys + 0xC0000000);
+    new_process->saved_esp = PROC_STACK_VIRT + sp_offset;
+    new_process->stack_top = PROC_STACK_VIRT + PROC_STACK_SIZE;
 
+    // =========================================================
+    // FIX 3: Give every process its own private heap.
+    //
+    // Same idea as the stack: allocate a physical page, map it
+    // at PROC_HEAP_VIRT inside proc_dir, and initialise the heap
+    // header through the kernel's physical window.
+    //
+    // We CANNOT write to PROC_HEAP_VIRT directly here because
+    // that virtual address only exists in proc_dir, not in the
+    // currently active kernel page directory.
+    // =========================================================
+    uint32_t heap_phys = get_next_free_process_frame();
+    map_page(proc_dir, PROC_HEAP_VIRT, heap_phys, PAGE_KERNEL);
 
-    new_process->saved_esp = (uint32_t)sp;
+    struct heap* proc_heap_hdr = (struct heap*)(heap_phys + 0xC0000000);
+    proc_heap_hdr->size     = PROC_HEAP_SIZE;
+    proc_heap_hdr->prev_size = 0;
+    set_flag (&proc_heap_hdr->size, FREE);
+    set_magic(&proc_heap_hdr->size, MAGIC_FIRST);
+
+    new_process->heap_start = PROC_HEAP_VIRT;
+    new_process->heap_end   = PROC_HEAP_VIRT + PROC_HEAP_SIZE;
+    new_process->next_virt  = PROC_HEAP_VIRT + PROC_HEAP_SIZE;
+
+    // =========================================================
+    // Add to the circular linked list of processes
+    // =========================================================
     if (current_index == 0) {
         process_lists = new_process;
-        current_index = current_index + 1;
+        current_index++;
         return;
     }
 
-
-    current_index = current_index + 1;
+    current_index++;
 
     struct PCB* current = process_lists;
-
     while (current->next != (void*)0) {
         current = current->next;
     }
-
     current->next = new_process;
     new_process->prev = current;
 }
 
 void init_process_scheduler(void (*func)()) {
     current_index = 0;
-
     create_process(func);
-
     current_process = process_lists;
-    next_process = process_lists;
+    next_process    = process_lists;
+
+    // =========================================================
+    // FIX 4: Actually start the first process.
+    //
+    // Previously this function returned to kernel_main, which
+    // looped forever in hlt.  The idle_process PCB existed but
+    // nobody ever ran it, so create_process(&timer_process_worker)
+    // and pic_enable_irq(0) inside idle_process were never reached.
+    //
+    // We manually do what the timer ISR normally does:
+    //   1. Load the process's page directory into CR3.
+    //   2. Point ESP at the fake interrupt frame.
+    //   3. popa  -> restore the zeroed registers.
+    //   4. iret  -> jump to func() with IF=1.
+    //
+    // This function never returns.
+    // =========================================================
+    uint32_t phys_dir = (uint32_t)current_process->page_dir - 0xC0000000;
+    uint32_t first_esp = current_process->saved_esp;
+
+    __asm__ volatile(
+        "movl %0, %%cr3\n"    /* switch to process page directory */
+        "movl %1, %%esp\n"    /* load process stack pointer       */
+        "popa\n"              /* restore fake register frame      */
+        "iret\n"              /* jump to process entry point      */
+        :
+        : "r"(phys_dir), "r"(first_esp)
+        : "memory"
+    );
+
+    /* Never reached; keeps the compiler happy. */
+    while(1) { __asm__ volatile("hlt"); }
 }
 
 void schedule() {

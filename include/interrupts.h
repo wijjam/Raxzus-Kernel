@@ -23,8 +23,10 @@ void init_interrupts(void);
 extern void isr_wrapper_33(void); // new keyboard wrapper
 extern void isr_wrapper_32(void); // new timer wrapper
 extern void isr_wrapper_129(void); // new system_call wrapper
+extern void isr_wrapper_130(void); // The process switch interrupt int 0x82
 extern void isr_wrapper_0(void); // new divide by 0 wrapper
 extern void isr_wrapper_13(void); // new general purpose wrapper
 extern void isr_wrapper_14(void); // new page fault wrapper
+extern void isr_wrapper_8(void); // new double fault wrapper
 
 #endif

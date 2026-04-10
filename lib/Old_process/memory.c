@@ -2,7 +2,7 @@
 #include "../include/vga.h"
 #include "../include/process_manager.h"
 
-struct heap* start_kernel_heap_memory;
+volatile struct heap* start_kernel_heap_memory;
 struct heap* kernel_heap_end;
 
 
@@ -12,14 +12,14 @@ struct heap* kernel_heap_end;
 
 void kernel_heap_init() {
 
-    extern _heap_start[];
-    uint32_t* kernel_start_heap_memory = (uint32_t*) _heap_start;
+    extern _end[];
+    volatile uint32_t* kernel_start_heap_memory = (volatile uint32_t*) _end;
 
-    start_kernel_heap_memory = (struct heap*)kernel_start_heap_memory;
+    start_kernel_heap_memory = (volatile struct heap*)kernel_start_heap_memory;
 
     // kernel_heap_end is now 8-bytes for the header memory and 8-bytes for data memory from the end
-    kernel_heap_end = ((struct heap*)((char*)((struct heap*) kernel_start_heap_memory) + HEAP_SIZE - sizeof(struct heap) - OFFSET));
-    kprintf("%x", start_kernel_heap_memory);
+    kernel_heap_end = ((struct heap*)((char*)((volatile struct heap*) kernel_start_heap_memory) + HEAP_SIZE - sizeof(struct heap) - OFFSET));
+
     
     start_kernel_heap_memory->size = HEAP_SIZE; // Here we give the heap 1MB, which includes all the headers
     start_kernel_heap_memory->prev_size = 0;
@@ -298,24 +298,20 @@ void free(void* pointer) {
 
 
 void heap_init(struct PCB* new_process) {
-    struct heap* start_process_heap_memory = (struct heap*)new_process->heap_start;
+    
+    volatile struct heap* start_process_heap_memory = (volatile struct heap*)new_process->heap_start;
     uint32_t heap_size = new_process->heap_end - new_process->heap_start;
     
-    ((struct heap*)new_process->heap_start)->size = heap_size; 
-    ((struct heap*)new_process->heap_start)->prev_size = 0;
-    set_flag(&(((struct heap*)new_process->heap_start)->size), FREE);
-    set_magic(&(((struct heap*)new_process->heap_start)->size), MAGIC_FIRST);
-
+    start_process_heap_memory->size = heap_size; 
+    start_process_heap_memory->prev_size = 0;
+    set_flag(&(start_process_heap_memory->size), FREE);
+    set_magic(&(start_process_heap_memory->size), MAGIC_FIRST);
 }
 
 
 void* pmalloc(uint32_t size) {
-    kprintf("[PMALLOC] entered\n");
     struct heap* current_block = (struct heap*)current_process->heap_start;
-    struct heap* heap_end = (struct heap*)((char*)current_process->heap_end - sizeof(struct heap) - OFFSET);
-
-        kprintf("[PMALLOC] heap_end: %x current_block size: %x\n", heap_end, current_block->size);
-
+    struct heap* heap_end = (struct heap*)current_process->heap_end - sizeof(struct heap) - OFFSET;
 
     uint32_t heap_size = (uint32_t)heap_end - (uint32_t)current_block;
 
@@ -324,9 +320,6 @@ void* pmalloc(uint32_t size) {
     uint32_t full_size_request = size + sizeof(struct heap);
 
     full_size_request = (full_size_request + 7) & ~7;
-
-
-
 
     if (full_size_request > heap_size-sizeof(struct heap)) {
         kprintf_red("Requested size exceeds available heap size.\n");
@@ -432,8 +425,8 @@ void* pmalloc(uint32_t size) {
 
 void process_free(void* pointer) {
 
-    struct heap* heap_end = (struct heap*)((char*)current_process->heap_end - sizeof(struct heap) - OFFSET);
-    struct heap* start_process_heap_memory = ( struct heap*)current_process->heap_start;
+    struct heap* heap_end = (struct heap*)current_process->heap_end - sizeof(struct heap) - OFFSET;
+    volatile struct heap* start_process_heap_memory = (volatile struct heap*)current_process->heap_start;
     uint32_t heap_size = (uint32_t)heap_end - (uint32_t)current_process->heap_start;
     
     // Checks the inputed pointer for NILL, exeding heap memory

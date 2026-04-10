@@ -6,6 +6,7 @@ void sleep(int time) {
 
     if (time <= 0) {
         kprintf("%e you can not make a process sleep: %d ms", time*10);
+        return;
     }
 
     asm volatile(
@@ -34,10 +35,11 @@ int fork() {
 }
 
 
+uint32_t* stack_address;
 
-void system_call_interrupt_handler(uint32_t* stack) {
+void system_call_interrupt_handler() {
 
-    struct registers* regs = (struct registers*)stack;
+    struct registers* regs = (struct registers*)stack_address;
 
 
     switch (regs->eax) {

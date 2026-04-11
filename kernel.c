@@ -26,38 +26,33 @@ void timer_process_worker() {
 void worker_process() {
     //pic_disable_irq(0);
     while(1) {
-        kprintf("We are printing with process: %x\n", current_process->PID);
+        //kprintf("We are printing with process: %x\n", current_process->PID);
         sleep(100);
     }
 }
 
 
+void user_process() {
+    while(1);
+}
 
 void idle_process() {
         // Do nothing, or print "IDLE" 
         // This keeps the CPU busy when all real processes sleep
-        kprintf("Hello this is idle\n");
 
-            create_process(&timer_process_worker);
+            create_process(&timer_process_worker, 0);
 
 
-        kprintf("BEFORE STI: current_process=%x\n", current_process);
-        kprintf("BEFORE STI: next_process=%x\n", next_process);
-        kprintf("BEFORE STI: current->saved_esp=%x\n", current_process->saved_esp);
-        kprintf("BEFORE STI: next->saved_esp=%x\n", next_process->saved_esp);
            // create_process(&worker_process);
             __asm__ volatile ("sti"); // opens the flood gates.
-            create_process(&worker_process);
-            create_process(&worker_process);
-            create_process(&worker_process);
-                        create_process(&worker_process);
-            create_process(&worker_process);
-            create_process(&worker_process);
-            create_process(&worker_process);
+            create_process(&worker_process, 0);
           
 
             pic_enable_irq(0); // Enable timer
             kprintf_cyan("RaxzusOS > ");
+            kprintf("The user process kernel eip is: %x \n", &user_process);
+            create_process(&user_process, 1);
+
     while(1) {
 
         
@@ -65,6 +60,7 @@ void idle_process() {
         __asm__ volatile("hlt");
     }
 }
+
 
 
 
@@ -80,11 +76,11 @@ void kernel_main(void) {
     pic_disable_irq(0); // Disable timer for now (would overwhelm us)
     pic_enable_irq(1);  // Enable keyboard
     init_keyboard();
+        kernel_heap_init(); // Inizialize the heap for the kernel (PS: The processes has a seperate heap init function)
     init_gdt();
     init_interrupts();  // Setup the IDT and connect the interrupts to stubs
     init_paging();      // Initializes paging where we flip the bit, save to CR3.
     init_pmm();         // Maps the virtual memory so we an have dynamic paging
-    kernel_heap_init(); // Inizialize the heap for the kernel (PS: The processes has a seperate heap init function)
 
     kprintf("\n");
 
@@ -104,22 +100,10 @@ void kernel_main(void) {
 
     
     //kprintf("The current_process before idle is: %x\n", current_process);  
-
+    kprintf("Jumping to IDLE.... \n");
     init_process_scheduler(&idle_process);
 
     kprintf("dfsfsdf");
-
-    //kprintf("The current_process after idle is: %x\n", current_process);
-    //create_process(&timer_process_worker);
-
-    __asm__ volatile ("sti"); // opens the flood gates.
-    
-    //pic_enable_irq(0); // Enable timer
-   
-    //kprintf("worker_process addr: %x\n", (uint32_t)worker_process);
-
-    //boot_intro();
-    kprintf_cyan("RaxzusOS > ");
 
 
     // Main kernel loop - just wait for interrupts

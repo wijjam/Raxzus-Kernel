@@ -14,6 +14,7 @@
 #define PROC_STACK_SIZE  4096
 #define PROC_HEAP_VIRT   0x40000000   /* 4 KB private heap, grows up   */
 #define PROC_HEAP_SIZE   4096
+#define PROC_CODE_VIRT 0x10000000
 
 
 #include <stdint.h>
@@ -50,6 +51,7 @@ typedef struct PCB {
     struct registers reg;
     uint32_t PID;
     int sleep_time;
+    uint32_t kernel_stack_top;
     struct PCB* next;
     struct PCB* prev;
 };
@@ -59,7 +61,7 @@ extern struct PCB* next_process;
 
 int copy_process(uint32_t* esp_stack);
 
-void create_process(void (*function_address)());
+void create_process(void (*func)(), int is_user);
 
 void init_process_scheduler(void (*func)());
 

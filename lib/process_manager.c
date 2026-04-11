@@ -4,6 +4,7 @@
 #include "../include/memory.h"
 #include "../include/paging_manager.h"
 #include "../include/pmm.h"
+#include "../include/gdt.h"
 
 struct PCB* current_process;
 struct PCB* next_process;
@@ -37,7 +38,7 @@ void timer_interrupt_handler() {
     pic_send_eoi(0);
 }
 
-void create_process(void (*func)()) {
+void create_process(void (*func)(), int is_user){
 
     struct PCB* new_process = (void*) kmalloc(sizeof(struct PCB));
     if (new_process == (void*)0) { return; }
@@ -83,9 +84,28 @@ void create_process(void (*func)()) {
     uint32_t* sp = (uint32_t*)(stack_phys + 0xC0000000 + PROC_STACK_SIZE);
 
     // IRET frame (highest address - pushed first)
-    *(--sp) = 0x202;                 // EFLAGS: IF=1, reserved bit set
-    *(--sp) = (uint32_t)actual_cs;   // CS
-    *(--sp) = (uint32_t)func;        // EIP -> entry point of the process
+    if (is_user) {
+
+            uint32_t code_phys = get_next_free_process_frame();
+        map_page(proc_dir, PROC_CODE_VIRT, code_phys, PAGE_USER);
+
+            // copy the function into it
+        uint8_t* dst = (uint8_t*)(code_phys + 0xC0000000);
+        uint8_t* src = (uint8_t*)func;
+        for (int i = 0; i < 4096; i++)
+            dst[i] = src[i]; // Since we are in the same bin for our kernel code and user since we do not have file system yet. We instead copy the function code into a maped user memory.
+
+
+        *(--sp) = 0x23;         // SS
+        *(--sp) = PROC_STACK_VIRT + PROC_STACK_SIZE;  // ESP
+        *(--sp) = 0x202;        // EFLAGS
+        *(--sp) = 0x1B;         // CS
+        *(--sp) = PROC_CODE_VIRT; // EIP
+    } else {
+        *(--sp) = 0x202;        // EFLAGS
+        *(--sp) = 0x08;         // CS
+        *(--sp) = (uint32_t)func; // EIP
+    }
 
     // POPA frame (lower address - pushed second)
     // popa pops: EDI, ESI, EBP, (skip ESP), EBX, EDX, ECX, EAX
@@ -129,6 +149,14 @@ void create_process(void (*func)()) {
     new_process->heap_end   = PROC_HEAP_VIRT + PROC_HEAP_SIZE;
     new_process->next_virt  = PROC_HEAP_VIRT + PROC_HEAP_SIZE;
 
+        void *kstack = kmalloc(4096);
+    if (!kstack) {
+        kprintf_red("Failed to allocate kernel stack for process");
+        asm volatile("hlt");
+    }
+    new_process->kernel_stack_top = (uint32_t)kstack + 4096;
+
+
     // =========================================================
     // Add to the circular linked list of processes
     // =========================================================
@@ -150,7 +178,7 @@ void create_process(void (*func)()) {
 
 void init_process_scheduler(void (*func)()) {
     current_index = 0;
-    create_process(func);
+    create_process(func, 0);
     current_process = process_lists;
     next_process    = process_lists;
 
@@ -201,8 +229,10 @@ void schedule() {
             next_process = process_lists;
             sim_current = next_process;
             //kprintf("No");
-             
+            
         }
+
+        tss_set_kernel_stack(sim_current->kernel_stack_top);
         
         if (sim_current->sleep_time > 0) {
             sim_current->sleep_time = sim_current->sleep_time - 1;

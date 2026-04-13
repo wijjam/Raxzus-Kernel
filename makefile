@@ -22,6 +22,8 @@ OBJECTS = $(ASM_OBJECTS) $(C_OBJECTS)
 KERNEL_ELF = myos.elf
 KERNEL = myos.bin
 ISO = myos.iso
+DISK = disk.img
+DISK_SIZE = 64
 
 # Default target
 all: $(ISO)
@@ -52,6 +54,11 @@ $(KERNEL_ELF): $(OBJECTS)
 	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) boot.o $(filter-out boot.o, $(OBJECTS))
 	@echo "Kernel ELF built: $(KERNEL_ELF)"
 
+$(DISK):
+	@echo "Creating blank disk image ($(DISK_SIZE)MB)..."
+	@dd if=/dev/zero of=$(DISK) bs=1M count=$(DISK_SIZE)
+	@echo "Disk image created: $(DISK)"
+
 # Compile C files
 %.o: %.c
 	@echo "Compiling $<..."
@@ -63,19 +70,17 @@ $(KERNEL_ELF): $(OBJECTS)
 	$(AS) $< -o $@
 
 # Run in QEMU
-run: $(ISO)
+run: $(ISO) $(DISK)
 	@echo "Starting QEMU..."
-	qemu-system-i386 -cdrom $(ISO)
+	qemu-system-i386 -cdrom $(ISO) -drive file=$(DISK),format=raw
 
-# Run with debugging
-debug: $(ISO)
-	@echo "Starting QEMU with debugging..."
-	qemu-system-i386 -cdrom $(ISO) -d int,cpu_reset -no-reboot -no-shutdown
-
-# Run in QEMU with serial output
-run-serial: $(ISO)
+run-serial: $(ISO) $(DISK)
 	@echo "Starting QEMU with serial output..."
-	qemu-system-i386 -cdrom $(ISO) -serial stdio -m 4G
+	qemu-system-i386 -cdrom $(ISO) -drive file=$(DISK),format=raw -serial stdio -m 4G
+
+debug: $(ISO) $(DISK)
+	@echo "Starting QEMU with debugging..."
+	qemu-system-i386 -cdrom $(ISO) -drive file=$(DISK),format=raw -d int,cpu_reset -no-reboot -no-shutdown
 
 # Clean build artifacts
 clean:
@@ -83,6 +88,10 @@ clean:
 	@rm -f $(OBJECTS) $(KERNEL) $(KERNEL_ELF) $(ISO)
 	@rm -rf isodir
 	@echo "Clean complete"
+
+clean-disk:
+	@rm -f $(DISK)
+	@echo "Disk image removed"
 
 # Clean everything including downloads
 distclean: clean

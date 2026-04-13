@@ -32,6 +32,10 @@ static void tss_set_entry(int i, uint32_t kernel_stack) {
 
 }
 
+uint32_t get_tss_stack(void) {
+    return tss.esp0;
+}
+
 
 void tss_set_kernel_stack(uint32_t stack) {
     tss.esp0 = stack;

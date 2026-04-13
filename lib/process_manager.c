@@ -73,21 +73,21 @@ void create_process(void (*func)(), int is_user){
     // We build the fake interrupt frame there, then compute what
     // the CPU will see as the stack pointer when it runs this
     // process under proc_dir.
-    // =========================================================
+    // ========================================================
+
     uint32_t stack_phys = get_next_free_process_frame();
-    map_page(proc_dir, PROC_STACK_VIRT, stack_phys, PAGE_KERNEL);
-
-    uint16_t actual_cs;
-    __asm__ volatile("mov %%cs, %0" : "=r"(actual_cs));
-
-    // Access the physical page through the kernel's identity window
-    uint32_t* sp = (uint32_t*)(stack_phys + 0xC0000000 + PROC_STACK_SIZE);
-
+    uint32_t* sp;
     // IRET frame (highest address - pushed first)
     if (is_user) {
+        map_page(proc_dir, PROC_STACK_VIRT, stack_phys, PAGE_USER);
+
+    // Access the physical page through the kernel's identity window
+        sp = (uint32_t*)(stack_phys + 0xC0000000 + PROC_STACK_SIZE);
 
             uint32_t code_phys = get_next_free_process_frame();
         map_page(proc_dir, PROC_CODE_VIRT, code_phys, PAGE_USER);
+
+        kprintf("PROC_CODE_VIRT is: %x\n", PROC_CODE_VIRT);
 
             // copy the function into it
         uint8_t* dst = (uint8_t*)(code_phys + 0xC0000000);
@@ -102,6 +102,11 @@ void create_process(void (*func)(), int is_user){
         *(--sp) = 0x1B;         // CS
         *(--sp) = PROC_CODE_VIRT; // EIP
     } else {
+                
+        map_page(proc_dir, PROC_STACK_VIRT, stack_phys, PAGE_KERNEL);
+
+    // Access the physical page through the kernel's identity window
+        sp = (uint32_t*)(stack_phys + 0xC0000000 + PROC_STACK_SIZE);
         *(--sp) = 0x202;        // EFLAGS
         *(--sp) = 0x08;         // CS
         *(--sp) = (uint32_t)func; // EIP

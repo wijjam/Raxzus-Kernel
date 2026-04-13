@@ -23,6 +23,8 @@ void install_idt(void) {
     idtp.limit = (sizeof(struct idt_entry) * 256) - 1; // this is the size of our idt
     idtp.base = (uint32_t)&idt; // this is the address of our idt
 
+    kprintf("The IDTP.limit: %x\n", idtp.base);
+
     for (int i = 0; i < 256; i++) {
         idt[i].base_low = 0;
         idt[i].base_high = 0;
@@ -44,7 +46,7 @@ void init_interrupts(void) {
     install_idt();
     
     // Use the actual current code segment instead of assuming 0x08
-    set_idt_entry(129, (uint32_t)isr_wrapper_129, cs, 0x8E); // The system call interrupt int 0x81
+    set_idt_entry(129, (uint32_t)isr_wrapper_129, cs, 0xEE); // The system call interrupt int 0x81
     set_idt_entry(130, (uint32_t)isr_wrapper_130, cs, 0x8E); // The process switch interrupt int 0x82
     set_idt_entry(33, (uint32_t)isr_wrapper_33, cs, 0x8E); // Keyboard interrupt
     set_idt_entry(32, (uint32_t)isr_wrapper_32, cs, 0x8E); // interrupt timer interrupt

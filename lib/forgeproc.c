@@ -35,19 +35,20 @@ int fork() {
 }
 
 
-uint32_t* stack_address;
+void system_call_interrupt_handler(struct registers* regs) {
 
-void system_call_interrupt_handler() {
 
-    struct registers* regs = (struct registers*)stack_address;
+    kprintf("The adress is: %x\n", regs);
+    kprintf("The adress eax is: %x\n", regs->eax);
+        __asm__ volatile("hlt");
 
 
     switch (regs->eax) {
         case 1:
-            current_process->sleep_time = regs->ebx;
+            //current_process->sleep_time = regs->ebx;
             //kprintf("%d", current_process->sleep_time);
-            schedule();
-            need_reschedule = 1;
+            //schedule();
+            //need_reschedule = 1;
         break;
 
         case 2:
@@ -55,9 +56,12 @@ void system_call_interrupt_handler() {
             //kprintf("The values we got are: %d\n", copy_process(regs));
 
         //__asm__ volatile("hlt");
+        break;
 
-    
-
+        case 3:
+            kprintf("fgsdffdfsds\n");
+        __asm__ volatile("hlt");
+            
             
         break;
             

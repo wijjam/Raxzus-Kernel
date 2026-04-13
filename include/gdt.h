@@ -6,6 +6,8 @@
 #define BITS_16_TO_19(x)  (((x) >> 16) & 0x0F)
 #define TOP_NIBBLE(x)     ((x) & 0xF0)
 
+
+uint32_t get_tss_stack(void);
 void init_gdt(void);
 void tss_set_kernel_stack(uint32_t stack);
 

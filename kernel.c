@@ -14,12 +14,14 @@
 #include "include/paging_manager.h"
 #include "include/pmm.h"
 #include "include/gdt.h"
+#include "include/ata_disk_driver.h"
+#include "include/kutils.h"
 
 void timer_process_worker() {
 
     while(1) {
         update_print_corner_time();
-        sleep(10); // 100 is 1 second. 
+        //sleep(10); // 100 is 1 second. 
     }
 }
 
@@ -27,12 +29,13 @@ void worker_process() {
     //pic_disable_irq(0);
     while(1) {
         //kprintf("We are printing with process: %x\n", current_process->PID);
-        sleep(100);
+        //sleep(100);
     }
 }
 
 
 void user_process() {
+    
     while(1);
 }
 
@@ -40,23 +43,43 @@ void idle_process() {
         // Do nothing, or print "IDLE" 
         // This keeps the CPU busy when all real processes sleep
 
-            create_process(&timer_process_worker, 0);
+            //create_process(&timer_process_worker, 0);
 
 
            // create_process(&worker_process);
-            __asm__ volatile ("sti"); // opens the flood gates.
-            create_process(&worker_process, 0);
+    __asm__ volatile ("sti"); // opens the flood gates.
+    //create_process(&worker_process, 0);
           
+    pic_enable_irq(0); // Enable timer
+    //kprintf("The user process kernel eip is: %x \n", &user_process);
+    //kprintf("The kernel tss stack before user process is: %x\n", get_tss_stack());
+    //create_process(&user_process, 1);
 
-            pic_enable_irq(0); // Enable timer
-            kprintf_cyan("RaxzusOS > ");
-            kprintf("The user process kernel eip is: %x \n", &user_process);
-            create_process(&user_process, 1);
+    char* buffer = kmalloc(1024);
+    
+    /*
+    for (int i = 0; i<1024; i++) {
+        buffer[i] = 0;
+    }
+    buffer[0] = 'K';
+    buffer[1] = 'O';
+    buffer[2] = 'R';
+    buffer[3] = 'V';
+    buffer[4] = 'E';
+    
 
+    ata_write_sector(2, 1, buffer);
+    */
+
+    ata_read_sector(2,1,buffer);
+
+    kprintf("The read from disk was: %s", buffer);
+    
+
+    
+    kprintf_cyan("RaxzusOS > ");
+    
     while(1) {
-
-        
-
         __asm__ volatile("hlt");
     }
 }
@@ -72,11 +95,13 @@ void kernel_main(void) {
     draw_box_bottom(70, COLOR_WHITE);
     print_text_align("Inizializing system programs.....", 70, ALIGN_LEFT, COLOR_BLACK, COLOR_YELLOW, 2);
     pic_remap(32, 40);  // Remap IRQs: Master to 32-39, Slave to 40-47
+
+    pic_disable_irq(46);
     
     pic_disable_irq(0); // Disable timer for now (would overwhelm us)
     pic_enable_irq(1);  // Enable keyboard
     init_keyboard();
-        kernel_heap_init(); // Inizialize the heap for the kernel (PS: The processes has a seperate heap init function)
+    kernel_heap_init(); // Inizialize the heap for the kernel (PS: The processes has a seperate heap init function)
     init_gdt();
     init_interrupts();  // Setup the IDT and connect the interrupts to stubs
     init_paging();      // Initializes paging where we flip the bit, save to CR3.
@@ -94,6 +119,7 @@ void kernel_main(void) {
     
  
     
+
 
 
 

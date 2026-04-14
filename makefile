@@ -72,7 +72,7 @@ $(DISK):
 # Run in QEMU
 run: $(ISO) $(DISK)
 	@echo "Starting QEMU..."
-	qemu-system-i386 -cdrom $(ISO) -drive file=$(DISK),format=raw
+	qemu-system-i386 -cdrom $(ISO) -drive file=$(DISK),format=raw,if=ide
 
 run-serial: $(ISO) $(DISK)
 	@echo "Starting QEMU with serial output..."

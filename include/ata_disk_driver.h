@@ -23,6 +23,7 @@
 #define ATA_MASTER 0xE0
 #define ATA_SLAVE  0xF0
 
-
+void ata_write_sector(uint32_t lba, uint8_t sector_count, uint16_t* buffer);
+void ata_read_sector(uint32_t lba, uint8_t sector_count, uint16_t* buffer);
 
 #endif

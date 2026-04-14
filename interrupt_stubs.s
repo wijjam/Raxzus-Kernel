@@ -84,36 +84,11 @@ skip_switch:
 # System call interrupt wrapper (IRQ 128 = interrupt 129)
 isr_wrapper_129:
     
-    pusha   # saves the registers
-    movl %esp, (stack_address)
-    call system_call_interrupt_handler  # calls system_call_interrupt_handler
+    pusha
+    pushl %esp        #← push esp as argument to the function
     
-
-    cmpl $0, need_reschedule
-    je skip_switch_again
-    movl $0, need_reschedule
-
-
-    movl current_process, %eax
-    movl next_process, %ebx
-    cmpl %eax, %ebx
-    je skip_switch_again              # Skip if same
-    
-    # SAVE current ESP
-    movl %esp, (%eax)
-
-    # SWITCH CR3 first (same reasoning as isr_wrapper_32 above)
-    movl 4(%ebx), %ecx
-    subl $0xC0000000, %ecx
-    movl %ecx, %cr3
-
-    # Update current_process
-    movl %ebx, current_process
-
-    # LOAD next ESP (now under the correct page directory)
-    movl (%ebx), %esp
-
-skip_switch_again:
+    call system_call_interrupt_handler
+    addl $4, %esp   #  ← clean up the argument
     popa
     iret
 

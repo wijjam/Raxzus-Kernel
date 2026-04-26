@@ -1,25 +1,25 @@
-# Raxzer OS — Custom x86 Kernel
-A monolithic x86 kernel built from scratch in C and Assembly. This is a personal learning project aimed at understanding how operating systems work at the lowest level — from bootloading to virtual memory.
+# Raxzer OS - Custom x86 Kernel
+A monolithic x86 kernel built from scratch in C and Assembly. This is a personal learning project aimed at understanding how operating systems work at the lowest level - from bootloading to virtual memory.
 
 ## Boot Screen
 ![RaxzusOS Boot Sequence](docs/boot.png)
 
 ## Features
-- **Bootloader** — GRUB multiboot, boots via ISO in QEMU
-- **VGA Text Mode** — Direct video memory output at `0xB8000` with color support
-- **IDT & PIC** — Full interrupt descriptor table with remapped PIC (IRQ 0–15 mapped to IDT 32–47)
-- **Keyboard Driver** — IRQ 1 handler for keyboard input
-- **PIT Timer** — Programmable interval timer at 100Hz (10ms intervals) driving the scheduler
-- **Dynamic Heap** — Custom `kmalloc`/`kfree` with block headers, 8-byte alignment, and coalescing free blocks
-- **Preemptive Multitasking** — Round-robin scheduler with timer-driven context switching
-- **Context Switching** — ESP-based process switching via assembly, saving/restoring full CPU state
-- **Process Control Block (PCB)** — Tracks saved ESP, PID, and process state
-- **Fork** — Spawns child processes with independent stacks and unique PIDs (WIP)
-- **Idle Process** — Always-running fallback process when all others sleep
-- **Virtual Memory / Paging** — x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0x00100000` (low-half kernel)
-- **System Calls** — `int 0x81` based dispatch using EAX as syscall code
-- **Boot Menu** — Interactive menu with Normal Boot, Safe Mode, and Recovery options
-- **Custom Filesystem** — Designed from scratch to crash loud but keep data accessible (WIP)
+- **Bootloader** - GRUB multiboot, boots via ISO in QEMU
+- **VGA Text Mode** - Direct video memory output at `0xB8000` with color support
+- **IDT & PIC** - Full interrupt descriptor table with remapped PIC (IRQ 0–15 mapped to IDT 32–47)
+- **Keyboard Driver** - IRQ 1 handler for keyboard input
+- **PIT Timer** - Programmable interval timer at 100Hz (10ms intervals) driving the scheduler
+- **Dynamic Heap** - Custom `kmalloc`/`kfree` with block headers, 8-byte alignment, and coalescing free blocks (To be updated to Raxzus Flow)
+- **Preemptive Multitasking** - Round-robin scheduler with timer-driven context switching
+- **Context Switching** - ESP-based process switching via assembly, saving/restoring full CPU state
+- **Process Control Block (PCB)** - Tracks saved ESP, PID, and process state
+- **Fork** - Spawns child processes with independent stacks and unique PIDs (WIP)
+- **Idle Process** - Always-running fallback process when all others sleep
+- **Virtual Memory / Paging** - x86 two-level page tables (Page Directory + Page Tables), MMU-based address translation, kernel mapped at `0x00100000` (low-half kernel)
+- **System Calls** - `int 0x81` based dispatch using EAX as syscall code
+- **Boot Menu** - Interactive menu with Normal Boot, Safe Mode, and Recovery options
+- **Custom Filesystem** - Designed from scratch to crash loud but keep data accessible (WIP)
 
 ## Screenshots
 
@@ -35,7 +35,7 @@ The kernel has opinions about bad memory access:
 
 ![Legendary Error](docs/legendary_error.png)
 
-Heap coalescing and reuse working correctly — merge test passing with the kernel still running after:
+Heap coalescing and reuse working correctly - merge test passing with the kernel still running after:
 
 ![Heap Merge Test](docs/heap_merge.png)
 
